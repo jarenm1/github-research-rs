@@ -1,0 +1,28 @@
+add deps with `cargo add <dep>`; remove deps with `cargo remove <dep>`.
+
+- run tests with `cargo nextest run`
+- do not use `mod.rs` files; use modern module organization
+
+- use tracing liberally for debugging; also feel free to run RUST_LOG=debug cargo run/test/etc
+  - use a lot of `info!` / `warn!` / `error!` / `debug!` / `trace!` and `#[instrument]`
+
+
+Limit nesting with modern rust:
+Instead of 
+if let Some(x) = foo {
+    // inner code
+}
+
+DO THIS:
+let Some(x) = foo else {
+    bail!("foo is None"); // or whatever way to early return
+};
+
+// inner code
+
+
+
+
+After every change run `cargo clippy`
+
+Use eyre for error handling.

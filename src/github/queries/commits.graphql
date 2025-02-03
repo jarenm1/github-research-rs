@@ -1,0 +1,33 @@
+query (
+  $owner: String!
+  $name: String!
+  $branch: String!
+  $first: Int!
+  $cursor: String
+) {
+  repository(owner: $owner, name: $name) {
+    ref(qualifiedName: $branch) {
+      target {
+        ... on Commit {
+          history(first: $first, after: $cursor) {
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+            edges {
+              node {
+                oid
+                messageHeadline
+                committedDate
+                author {
+                  email
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
