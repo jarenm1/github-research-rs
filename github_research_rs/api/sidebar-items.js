@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["create_router"],"mod":["openapi","process","search","types"]};

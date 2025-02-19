@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["MAX_PATCH_SIZE_BYTES"],"fn":["process_user"],"struct":["AppError"],"type":["AppResult"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["GeminiCandidate","GeminiContent2","GeminiPart2","GeminiResponse","MachineLearning","OpenAIEmbedding","OpenAIEmbeddingRequest","OpenAIEmbeddingResponse"]};
