@@ -153,7 +153,7 @@ impl GitHubClient {
         });
 
         let response = self.graphql_request(query, variables).await?;
-        
+
         let contributions_array = response["data"]["user"]["contributionsCollection"]
             ["commitContributionsByRepository"]
             .as_array()
