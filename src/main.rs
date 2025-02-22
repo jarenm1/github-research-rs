@@ -6,19 +6,18 @@ mod ml;
 
 use clap::{Parser, Subcommand};
 use color_eyre::eyre::{Result, WrapErr};
-use opentelemetry::{global, trace::TracerProvider, InstrumentationScope, KeyValue};
-use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
+use opentelemetry::global;
+use opentelemetry::trace::TracerProvider;
 use opentelemetry_otlp::{LogExporter, MetricExporter, Protocol, SpanExporter, WithExportConfig};
 use opentelemetry_sdk::logs::SdkLoggerProvider;
 use opentelemetry_sdk::metrics::SdkMeterProvider;
 use opentelemetry_sdk::trace::SdkTracerProvider;
-use opentelemetry_sdk::{trace, Resource};
-use std::fs::OpenOptions;
-use std::io::Write;
+use opentelemetry_sdk::Resource;
 use std::sync::{Arc, LazyLock};
 use tracing::info;
-use tracing_error::ErrorLayer;
-use tracing_subscriber::{prelude::*, EnvFilter, Registry};
+use tracing::subscriber::set_global_default;
+use tracing_opentelemetry::OpenTelemetryLayer;
+use tracing_subscriber::{prelude::*, Registry};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -86,105 +85,45 @@ fn init_metrics() -> SdkMeterProvider {
         .build()
 }
 
+#[tracing::instrument]
+fn test_function() {
+    tracing::info!("inside the test function");
+    println!("test");
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let logger_provider = init_logs();
 
-    // Create a new OpenTelemetryTracingBridge using the above LoggerProvider.
-    let otel_layer = OpenTelemetryTracingBridge::new(&logger_provider);
-
-    // let exporter = LogExporter::builder()
-    //     .with_http()
-    //     .with_protocol(Protocol::HttpBinary)
-    //     .build()
-    //     .expect("Failed to create log exporter");
-
-    // SdkLoggerProvider::builder()
-    //     .with_batch_exporter(exporter)
-    //     .with_resource(RESOURCE.clone())
-    //     .build();
-    //
-    //
-
-    // let tracer = opentelemetry_otlp::SpanExporter
-
-    // // Set up file-based JSON tracing
-    // let file = std::fs::OpenOptions::new()
-    //     .create(true)
-    //     .append(true)
-    //     .open("traces.json")
-    //     .wrap_err("Failed to open traces.json")?;
-    //
-    // // Create a JSON exporter that writes to our file
-    // let exporter = opentelemetry_stdout::SpanExporter::builder()
-    //     .with_writer(file)
-    //     .build();
-    //
-    // // Create a new tracer provider
-    // let provider = trace::TracerProvider::builder()
-    //     .with_simple_exporter(exporter)
-    //     .with_config(
-    //         trace::config().with_resource(Resource::new(vec![KeyValue::new(
-    //             "service.name",
-    //             "github-research",
-    //         )])),
-    //     )
-    //     .build();
-    //
-    // // Set it as the global provider
-    // global::set_tracer_provider(provider);
-    //
-    // let tracer = global::tracer("github-research");
-    // let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
-    //
-    // // Set up the JSON formatting layer
-    // let fmt_layer = tracing_subscriber::fmt::layer()
-    //     .json()
-    //     .with_file(true)
-    //     .with_line_number(true)
-    //     .with_thread_ids(true)
-    //     .with_target(true)
-    //     .with_level(true)
-    //     .with_current_span(true)
-    //     .with_span_list(true);
-    //
-    // let filter_layer = EnvFilter::try_from_default_env()
-    //     .or_else(|_| EnvFilter::try_new("debug"))
-    //     .wrap_err("Failed to create EnvFilter")?;
-    tracing_subscriber::registry()
-        .with(otel_layer)
-        // .with(fmt_layer)
-        .init();
+    //I think these are enabled by default but Ill leave this here just in case you want to enable
+    //it.
+    //https://github.com/open-telemetry/opentelemetry-rust/issues/761
+    //let filter_otel = EnvFilter::new("info")
+    //.add_directive("hyper=off".parse().unwrap())
+    //.add_directive("opentelemetry=off".parse().unwrap())
+    //.add_directive("tonic=off".parse().unwrap())
+    //.add_directive("h2=off".parse().unwrap())
+    //.add_directive("reqwest=off".parse().unwrap());
 
     let tracer_provider = init_traces();
+
+    let otel_layer = OpenTelemetryLayer::new(tracer_provider.tracer("bountybot")); // .with_filter(filter_otel);
+
+    //u can comment this and end of following line out to disable the console printing.
+    let fmt_layer = tracing_subscriber::fmt::layer().pretty();
+
+    let subscriber = Registry::default().with(otel_layer).with(fmt_layer); //<-;
+    set_global_default(subscriber).expect("Failed to set subscriber.");
+
+    //sets globals
     global::set_tracer_provider(tracer_provider.clone());
 
     let meter_provider = init_metrics();
     global::set_meter_provider(meter_provider.clone());
 
-    let common_scope_attributes = vec![KeyValue::new("scope-key", "scope-value")];
-    let scope = InstrumentationScope::builder("basic")
-        .with_version("1.0")
-        .with_attributes(common_scope_attributes)
-        .build();
-
-    // let tracer = global::tracer_with_scope(scope.clone());
-    // let meter = global::meter_with_scope(scope);
-
-    // let tracy_layer = tracing_tracy::TracyLayer::default();
-
-    // Initialize the tracing subscriber
-    // Registry::default()
-    //     .with(tracy_layer)
-    //     .with(otel_layer)
-    //     // .with(filter_layer)
-    //     // .with(fmt_layer)
-    //     // .with(telemetry)
-    //     .with(ErrorLayer::default())
-    //     .try_init()
-    //     .wrap_err("Failed to set up global tracing subscriber")?;
-
     color_eyre::install().wrap_err("Failed to install color-eyre error handler")?;
+
+    test_function();
 
     // Register a shutdown handler
     // tokio::spawn(async move {
@@ -258,7 +197,7 @@ mod tests {
 
         // Test processing the first commit
         let commit = &commits[0];
-        let patch = github_client
+        let _patch = github_client
             .get_commit_patch(owner, repo, &commit.oid)
             .await
             .map_err(|e| {
