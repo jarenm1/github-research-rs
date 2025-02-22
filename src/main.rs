@@ -117,8 +117,6 @@ async fn main() -> Result<()> {
 
     color_eyre::install().wrap_err("Failed to install color-eyre error handler")?;
 
-    test_function();
-
     // Register a shutdown handler
     // tokio::spawn(async move {
     //     tokio::signal::ctrl_c().await.unwrap();
