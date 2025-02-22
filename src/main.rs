@@ -85,12 +85,6 @@ fn init_metrics() -> SdkMeterProvider {
         .build()
 }
 
-#[tracing::instrument]
-fn test_function() {
-    tracing::info!("inside the test function");
-    println!("test");
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
     let logger_provider = init_logs();
