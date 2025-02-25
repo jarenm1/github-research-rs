@@ -1,0 +1,33 @@
+version: '3'
+
+services:
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    container_name: otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "13133:13133" # Health check extension
+    networks:
+      - otel-net
+
+  # Rust App
+  rust-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rust-app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - otel-collector
+    networks:
+      - otel-net
+
+networks:
+  otel-net:
+    driver: bridge
